@@ -8,6 +8,7 @@ defmodule Chatturing.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      Chatturing.RoomRegistry,
       ChatturingWeb.Telemetry,
       Chatturing.Repo,
       {DNSCluster, query: Application.get_env(:chatturing, :dns_cluster_query) || :ignore},

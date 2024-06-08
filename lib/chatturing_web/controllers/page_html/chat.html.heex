@@ -1,0 +1,18 @@
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/jquery.mcustomscrollbar/3.1.5/jquery.mCustomScrollbar.concat.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/jquery.mcustomscrollbar/3.1.5/jquery.mCustomScrollbar.min.css">
+  <link rel="stylesheet" href={~p"/assets/css/chat.css"}>
+</head>
+<div>
+  <h1>Welcome to CHATTURING</h1>
+  <p>User: <%= @user_id %></p>
+  <!-- Include data attributes to pass variables to JavaScript -->
+  <div id="user-info" data-user-id={@user_id}></div>
+
+    <a href={ChatturingWeb.Router.Helpers.page_path(@conn, :home)}>
+    <button>Go to Chat Room</button> </a>
+  </div>
+  <div class="bg">
+</div>
