@@ -5,14 +5,32 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/jquery.mcustomscrollbar/3.1.5/jquery.mCustomScrollbar.min.css">
   <link rel="stylesheet" href={~p"/assets/css/chat.css"}>
 </head>
-<div>
-  <h1>Welcome to CHATTURING</h1>
-  <p>User: <%= @user_id %></p>
-  <!-- Include data attributes to pass variables to JavaScript -->
-  <div id="user-info" data-user-id={@user_id}></div>
 
-    <a href={ChatturingWeb.Router.Helpers.page_path(@conn, :home)}>
-    <button>Go to Chat Room</button> </a>
-  </div>
-  <div class="bg">
+<div>
+  <h1>Welcome to the Chat Room</h1>
+  <p>You are in chat: <%= @room %></p>
+  <p>User: <%=@user_id%></p>
+  <!-- Include data attributes to pass variables to JavaScript -->
+  <div id="room-info" data-user-id={@user_id} data-room-id={@room}></div>
 </div>
+
+<%!-- <div id="messages" role="log" aria-live="polite"></div>
+<input id="chat-input" type="text"> --%>
+
+<div class="chat">
+    <div class="chat-title">
+      <h1>Time Remaining</h1>
+      <h2>1:32</h2>
+      <figure class="avatar">
+        <img src="" /></figure>
+    </div>
+    <div class="messages">
+      <div class="messages-content"></div>
+    </div>
+    <div class="message-box">
+      <textarea type="text" class="message-input" placeholder="Type message..."></textarea>
+      <button type="submit" class="message-submit">Send</button>
+    </div>
+  
+  </div>
+  <div class="bg"></div>

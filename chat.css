@@ -306,3 +306,86 @@ body {
         transform: translateY(-10px);
    }
 }
+
+
+
+/* Style text */
+
+.logo-text {
+display: flex;
+position: absolute;
+height: 200px;
+width: auto;
+padding: 30px;
+font-size: 1.5em;
+font-family: "Lato";
+font-weight: 900;
+color: blue;
+}
+
+/* animation */
+
+@keyframes bounce-letter {
+0% {
+    transform: translateY(0px);
+}
+
+50% {
+    transform: translateY(-12px);
+}
+
+75% {
+    transform: translateY(1px);
+}
+
+100% {
+    transform: translateY(0px);
+}
+}
+
+/* Divs for each letter linked up to animation above */
+
+.anim-letter-1 { 
+animation: bounce-letter 0.8s ease 1s 1;
+}
+
+.anim-letter-2 { 
+animation: bounce-letter 0.8s ease 1.1s 1;
+}
+
+.anim-letter-3 { 
+animation: bounce-letter 0.8s ease 1.2s 1;
+}
+
+.anim-letter-4 { 
+animation: bounce-letter 0.8s ease 1.3s 1;
+}
+
+.anim-letter-5 { 
+animation: bounce-letter 0.8s ease 1.4s 1;
+animation-iteration-count: infinite;
+}
+
+.anim-letter-6 { 
+animation: bounce-letter 0.8s ease 1.5s 1;
+}
+
+.anim-letter-7 { 
+animation: bounce-letter 0.8s ease 1.6s 1;
+}
+
+.anim-letter-8 { 
+animation: bounce-letter 0.8s ease 1.7s 1;
+}
+
+.anim-letter-9 { 
+animation: bounce-letter 0.8s ease 1.8s 1;
+}
+
+.anim-letter-10 { 
+animation: bounce-letter 0.8s ease 1.9s 1;
+}
+
+.anim-letter-11 { 
+animation: bounce-letter 0.8s ease 2s 1;
+}

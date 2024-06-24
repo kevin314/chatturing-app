@@ -17,14 +17,17 @@ defmodule ChatturingWeb.Router do
   scope "/", ChatturingWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
-    get "/chat", PageController, :chat
+    #get "/", PageController, :home
+    live "/", PageLive, :home
+    # get "/chat", PageController, :chat
+    # live "/chat_room", ChatRoomLive
   end
 
   # Other scopes may use custom stacks.
-  # scope "/api", ChatturingWeb do
-  #   pipe_through :api
-  # end
+  scope "/api", ChatturingWeb do
+    pipe_through :api
+    post "/messages", MessageController, :create
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:chatturing, :dev_routes) do

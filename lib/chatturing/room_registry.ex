@@ -19,24 +19,23 @@ defmodule Chatturing.RoomRegistry do
 
   def handle_call(:allocate_room, _from, state) do
     {room, new_state} = find_or_create_room(state)
-    IO.puts('firstroom')
-    IO.puts(room)
     {:reply, {:ok, room}, new_state}
   end
 
   def handle_call({:add_user_to_room, room, user}, _from, state) do
     users = Map.get(state, room, [])
     new_state = Map.put(state, room, [user | users])
-    IO.puts(room)
-    IO.inspect(new_state)
     {:reply, :ok, new_state}
   end
 
   def handle_call({:remove_user_from_room, room, user_id}, _from, state) do
-    IO.puts('wow')
-    IO.inspect(state)
-    new_state = Map.update(state, room, [], fn users -> List.delete(users, user_id) end)
-    {:reply, :ok, new_state}
+    if room != "room:bot" do
+      new_state = Map.update(state, room, [], fn users -> List.delete(users, user_id) end)
+      {:reply, :ok, new_state}
+    else
+      {:reply, :ok, state}
+    end
+
   end
 
 
@@ -45,13 +44,11 @@ defmodule Chatturing.RoomRegistry do
     |> Enum.find(fn {_room, users} -> length(users) < 2 end)
     |> case do
       nil ->
-        IO.puts("nil room")
         room = "room:#{Enum.count(state) + 1}"
-        #IO.inspect(Map.put(state, room, []))
         {room, Map.put(state, room, [])}
-      {room, _users} ->
+      {room, users} ->
         IO.puts("found room")
-        #IO.inspect(state)
+        IO.inspect({room, users})
         {room, state}
     end
   end
