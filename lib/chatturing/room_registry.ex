@@ -13,8 +13,12 @@ defmodule Chatturing.RoomRegistry do
     GenServer.call(__MODULE__, :allocate_room)
   end
 
-  def remove_user_from_room(room, user_id) do
-    GenServer.call(__MODULE__, {:remove_user_from_room, room, user_id})
+  def remove_room(room) do
+    GenServer.call(__MODULE__, {:remove_room, room})
+  end
+
+  def get_users_from_room(room) do
+    GenServer.call(__MODULE__, {:get_users_from_room, room})
   end
 
   def handle_call(:allocate_room, _from, state) do
@@ -25,18 +29,29 @@ defmodule Chatturing.RoomRegistry do
   def handle_call({:add_user_to_room, room, user}, _from, state) do
     users = Map.get(state, room, [])
     new_state = Map.put(state, room, [user | users])
+    IO.puts("add user to room")
+    IO.inspect(new_state)
     {:reply, :ok, new_state}
   end
 
-  def handle_call({:remove_user_from_room, room, user_id}, _from, state) do
+  def handle_call({:remove_room, room}, _from, state) do
     if room != "room:bot" do
-      new_state = Map.update(state, room, [], fn users -> List.delete(users, user_id) end)
+      #new_state = Map.update(state, room, [], fn users -> List.delete(users, user_id) end)
+      #users = Map.get(state, room, [])
+      new_state = Map.delete(state, room)
       {:reply, :ok, new_state}
     else
       {:reply, :ok, state}
     end
-
   end
+
+  def handle_call({:get_users_from_room, room}, _from, state) do
+    users = Map.get(state, room, [])
+    IO.puts("HANDLE GET USERS FROM ROOM")
+    IO.inspect(users)
+    {:reply, users, state}
+  end
+
 
 
   defp find_or_create_room(state) do
@@ -44,7 +59,7 @@ defmodule Chatturing.RoomRegistry do
     |> Enum.find(fn {_room, users} -> length(users) < 2 end)
     |> case do
       nil ->
-        room = "room:#{Enum.count(state) + 1}"
+        room = Ecto.UUID.generate()
         {room, Map.put(state, room, [])}
       {room, users} ->
         IO.puts("found room")
@@ -52,6 +67,20 @@ defmodule Chatturing.RoomRegistry do
         {room, state}
     end
   end
+
+  # defp find_or_create_room(state) do
+  #   state
+  #   |> Enum.find(fn {_room, users} -> length(users) < 2 end)
+  #   |> case do
+  #     nil ->
+  #       room = "room:#{Enum.count(state) + 1}"
+  #       {room, Map.put(state, room, [])}
+  #     {room, users} ->
+  #       IO.puts("found room")
+  #       IO.inspect({room, users})
+  #       {room, state}
+  #   end
+  # end
 
   def add_user_to_room(room, user) do
     GenServer.call(__MODULE__, {:add_user_to_room, room, user})

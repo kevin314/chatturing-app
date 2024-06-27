@@ -49,17 +49,53 @@ Hooks.Chat = {
     let userId = roomInfo.getAttribute("data-user-id");
     let roomId = roomInfo.getAttribute("data-room-id");
 
-    var $messages = $('.messages-content'),
-        d, h, m,
-        i = 0;
+    var $messages = $('.messages-content');
 
-    $messages.mCustomScrollbar();
+    let d, h, m, i = 0;
+
+    //$messages.mCustomScrollbar();
 
     function updateScrollbar() {
       $messages.mCustomScrollbar("update").mCustomScrollbar('scrollTo', 'bottom', {
         scrollInertia: 10,
         timeout: 0
       });
+    }
+
+    function initializeScrollbar() {
+      $messages.mCustomScrollbar();
+      console.log($messages)
+    }
+
+    this.handleEvent("start_timer", ({time}) => {
+      console.log("HANDLE EVENT START TIMER", time)
+      startTimer(time);
+    });
+
+    function startTimer(time) {
+      console.log("TIMER STARTED");
+      let timerElement = document.querySelector("#timer");
+      let endTime = Date.now() + time;
+      let animationFrame;
+      
+      const updateTimer = () => {
+        let now = Date.now();
+        let remaining = endTime - now;
+        
+        if (remaining <= 0) {
+          timerElement.textContent = "00:00";
+          cancelAnimationFrame(animationFrame);
+          // Optionally, you can trigger another event or function when the timer ends
+        } else {
+          let seconds = Math.floor((remaining / 1000) % 60);
+          let minutes = Math.floor((remaining / (1000 * 60)) % 60);
+          timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+          animationFrame = requestAnimationFrame(updateTimer); // Schedule the next update
+        }
+      };
+    
+      updateTimer(); // Initialize the timer display immediately
+      animationFrame = requestAnimationFrame(updateTimer);
     }
 
     function setDate() {
@@ -71,6 +107,9 @@ Hooks.Chat = {
     }
 
     function insertMessage(msg) {
+      console.log('insert message')
+      messageInput.setAttribute('disabled', 'true');
+      sendButton.setAttribute('disabled', 'true');
       if ($.trim(msg) == '') {
         return false;
       }
@@ -87,6 +126,26 @@ Hooks.Chat = {
       updateScrollbar();
     }
 
+    this.handleEvent("update_turn", ({turnUserId}) => {
+      updateTurn(turnUserId);
+    });
+
+    let messageInput = this.el.querySelector('.message-input');
+    let sendButton = this.el.querySelector('.message-submit');
+  
+    function updateTurn(turnUserId) {
+      console.log('updating TURN!')
+      console.log('turnUserID', turnUserId)
+
+      if (userId == turnUserId) {
+        messageInput.removeAttribute('disabled');
+        sendButton.removeAttribute('disabled');
+      } else {
+        messageInput.setAttribute('disabled', 'true');
+        sendButton.setAttribute('disabled', 'true');
+      }
+    }
+
     const messageBox = this.el.querySelector('.message-box');
     console.log('dp message', messageBox)
     const prompt = this.el.querySelector('#prompt');
@@ -97,14 +156,14 @@ Hooks.Chat = {
     const guessResult = document.getElementById('guess-result');
     const guessText = document.getElementById('guess');
 
-    function displayGuessPrompt(userId) {
+    function displayGuessPrompt(room) {
       messageBox.style.display = 'none';
       prompt.style.display = 'block';
 
       humanBtn.addEventListener('click', () => {
         console.log('HUMAN button clicked');
         prompt.style.display = 'none';
-        if (userId === "bot") {
+        if (room === "room:bot") {
           guessText.textContent = 'BOT!';
         } else {
           guessText.textContent = 'HUMAN!';
@@ -115,7 +174,7 @@ Hooks.Chat = {
       botBtn.addEventListener('click', () => {
         console.log('BOT button clicked');
         prompt.style.display = 'none';
-        if (userId === "bot") {
+        if (room === "room:bot") {
           guessText.textContent = 'BOT!';
         } else {
           guessText.textContent = 'HUMAN!';
@@ -157,15 +216,17 @@ Hooks.Chat = {
       }
     });
 
-    this.handleEvent("init_guess", ({user_id}) => {
+    this.handleEvent("init_guess", ({room}) => {
       console.log('init_guess!')
-      console.log('user_id', user_id)
-      displayGuessPrompt(user_id)
+      console.log('room', room)
+      displayGuessPrompt(room)
     });
 
     window.addEventListener("beforeunload", () => {
       console.log("left channel")
     })
+
+    initializeScrollbar();
   }
 }
 

@@ -7,7 +7,7 @@ defmodule ChatturingWeb.PageLive do
     room = params["room"] || session["room"]
     # {:ok, room} = Chatturing.RoomRegistry.allocate_room()
     # Chatturing.RoomRegistry.add_user_to_room(room, user_id)
-    {:ok, assign(socket, room: room, user_id: user_id, id: 1)}
+    {:ok, assign(socket, room: room, user_id: user_id, turn_user_id: nil, loading: true)}
   end
 
   # def handle_event("new_msg", %{"body" => body}, socket) do
@@ -24,17 +24,29 @@ defmodule ChatturingWeb.PageLive do
   def handle_event("join_chat", %{"user_id" => user_id, "value" => _value}, socket) do
     IO.puts('handle_join_chat!')
     random_num = :rand.uniform()
-    if random_num < 0.5 do
+    if random_num < 1 do
       {:ok, room} = Chatturing.RoomRegistry.allocate_room()
+      IO.puts(room)
       Chatturing.RoomRegistry.add_user_to_room(room, user_id)
 
       if connected?(socket), do: Phoenix.PubSub.subscribe(Chatturing.PubSub, "chat_room:" <> room)
 
-      socket = assign(socket, room: room, user_id: user_id)
-      {:noreply, socket}
+      users = Chatturing.RoomRegistry.get_users_from_room(room)
+      if length(users) == 2 do
+        socket = assign(socket, room: room, user_id: user_id, loading: true, turn_user_id: socket.assigns.user_id)
+        #socket = assign(socket, :turn_user_id, socket.assigns.user_id)
+        Process.send_after(self(), {:check_room, room}, 3000)
+        {:noreply, socket}
+      else
+        socket = assign(socket, room: room, user_id: user_id, loading: true)
+        #Process.send_after(self(), {:check_room, room}, 3000)
+        {:noreply, socket}
+      end
     else
       room = "room:bot"
-      socket = assign(socket, room: room, user_id: user_id)
+      IO.puts(room)
+      socket = assign(socket, room: room, user_id: user_id, loading: true)
+      Process.send_after(self(), {:check_room, room}, 3000)
       {:noreply, socket}
     end
   end
@@ -44,40 +56,121 @@ defmodule ChatturingWeb.PageLive do
     room = socket.assigns.room
     user_id = socket.assigns.user_id
     if room == "room:bot" do
+      #socket = push_event(socket, "update_turn", %{"turnUserId" => "bot"})
+
       saved = socket.assigns[:saved] || ""
       res = Chatturing.Messenger.send_message_to_python(message, saved, user_id)
+      random_number = :rand.uniform(3000)
+      :timer.sleep(2000 + random_number)
 
-      updated_socket = assign(socket, :saved, res["saved"])
-      {:noreply, push_event(updated_socket, "new_msg", %{"message" => res["message"], "user_id" => "bot"})}
+      socket = assign(socket, saved: res["saved"])
+      #Process.send_after(self(), {:update_turn, %{"user_id" => user_id}}, 3000)
+      socket = push_event(socket, "update_turn", %{"turnUserId" => user_id})
+      {:noreply, push_event(socket, "new_msg", %{"message" => res["message"], "user_id" => "bot"})}
 
     else
       Phoenix.PubSub.broadcast(Chatturing.PubSub, "chat_room:" <> room, {:new_message, %{"message" => message, "user_id" => user_id}})
       {:noreply, socket}
     end
-    #{:noreply, push_event(socket, "new_msg", %{"message" => message, user_id => user_id})}
-    #{:noreply, socket}
   end
 
   @spec handle_info({:new_message, map()}, Phoenix.LiveView.Socket.t()) :: {:noreply, map()}
   def handle_info({:new_message, %{"message" => message, "user_id" => user_id}}, socket) do
     IO.puts('HANDLE NEW MESSAGE!')
-    {:noreply, push_event(socket, "new_msg", %{"message" => message, "user_id" => user_id})}
-    #{:noreply, update(socket, :messages, fn messages -> [payload.message | messages] end)}
+
+    users = Chatturing.RoomRegistry.get_users_from_room(socket.assigns.room)
+    if Enum.at(users, 0) != user_id do
+      socket = assign(socket, :turn_user_id, Enum.at(users, 0))
+      IO.puts("state of socket turn")
+      IO.puts(socket.assigns.turn_user_id)
+      socket = push_event(socket, "update_turn", %{"turnUserId" => socket.assigns.turn_user_id})
+      {:noreply, push_event(socket, "new_msg", %{"message" => message, "user_id" => user_id})}
+    else
+      socket = assign(socket, :turn_user_id, Enum.at(users, 1))
+      socket = push_event(socket, "update_turn", %{"turnUserId" => socket.assigns.turn_user_id})
+      {:noreply, push_event(socket, "new_msg", %{"message" => message, "user_id" => user_id})}
+    end
   end
 
-  def handle_info({:end_game, %{"user_id" => user_id}}, socket) do
-    IO.puts("ENDING GAME")
-    {:noreply, push_event(socket, "init_guess", %{"user_id" => user_id})}
+  def handle_info({:update_turn, %{"user_id" => user_id}}, socket) do
+    IO.puts("SWITCHING TURNS")
+    {:noreply, push_event(socket, "update_turn", %{"turnUserId" => user_id})}
   end
+
+  def handle_info({:end_game, %{"room" => room}}, socket) do
+    IO.puts("ENDING GAME")
+    {:noreply, push_event(socket, "init_guess", %{"room" => room})}
+  end
+
+  def handle_info({:check_room, room}, socket) do
+    if room == "room:bot" do
+      #socket = assign(socket, :loading, false)
+      IO.puts("CHECK ROOM BOT")
+      send(self(), {:finish_loading})
+      {:noreply, socket}
+    else
+      users_in_room = Chatturing.RoomRegistry.get_users_from_room(room)
+      IO.puts("USERS IN ROOM")
+      IO.inspect(users_in_room)
+
+      if length(users_in_room) >= 2 do
+        IO.puts("REMOVE LOADING SCREEN")
+        #Chatturing.RoomRegistry.remove_room(room)
+        socket = assign(socket, :turn_user_id, socket.assigns.user_id)
+        Phoenix.PubSub.broadcast(Chatturing.PubSub, "chat_room:" <> room, {:finish_loading})
+        {:noreply, socket}
+      else
+        #Process.send_after(self(), {:check_room, room}, 1000)
+        {:noreply, socket}
+      end
+    end
+  end
+
+  def handle_info({:finish_loading}, socket) do
+    IO.puts("FINISH LOADING")
+    room = socket.assigns.room
+
+    random_number = :rand.uniform(1)
+    if room == "room:bot" and random_number >= 0 do
+      room = socket.assigns.room
+
+      socket = assign(socket, :loading, false)
+      Process.send_after(self(), {:end_game, %{"room" => room}}, 60000)
+      socket = push_event(socket, "start_timer", %{"time" => 60000})
+      send(self(), {:send_bot_message})
+      {:noreply, socket}
+    else
+
+      IO.puts(socket.assigns.turn_user_id)
+      socket = assign(socket, :turn_user_id, socket.assigns.turn_user_id)
+
+      socket = push_event(socket, "update_turn", %{"turnUserId" => socket.assigns.turn_user_id})
+      socket = assign(socket, :loading, false)
+      Process.send_after(self(), {:end_game, %{"room" => room}}, 60000)
+      {:noreply, push_event(socket, "start_timer", %{"time" => 60000})}
+    end
+  end
+
+  def handle_info({:send_bot_message}, socket) do
+    res = Chatturing.Messenger.send_message_to_python("hello", "", socket.assigns.user_id)
+    random_number = :rand.uniform(3000)
+    :timer.sleep(2000 + random_number)
+
+    socket = assign(socket, saved: res["saved"])
+    #Process.send_after(self(), {:update_turn, %{"user_id" => user_id}}, 3000)
+    #socket = push_event(socket, "update_turn", %{"turnUserId" => user_id})
+    socket = push_event(socket, "update_turn", %{"turnUserId" => socket.assigns.user_id})
+    {:noreply, push_event(socket, "new_msg", %{"message" => res["message"], "user_id" => "bot"})}
+  end
+
 
   def terminate(_reason, socket) do
-    user_id = socket.assigns.user_id
     room = socket.assigns.room
     if room == nil do
       :ok
     else
-      Phoenix.PubSub.broadcast(Chatturing.PubSub, "chat_room:" <> room, {:end_game, %{"user_id" => user_id}})
-      #Chatturing.RoomRegistry.remove_user_from_room(room, user_id)
+      Chatturing.RoomRegistry.remove_room(room)
+      Phoenix.PubSub.broadcast(Chatturing.PubSub, "chat_room:" <> room, {:end_game, %{"room" => room}})
       :ok
     end
   end
@@ -87,38 +180,44 @@ defmodule ChatturingWeb.PageLive do
     IO.puts("RENDER!")
     ~H"""
     <%= if @room do %>
-      <div id="chat-room-container" id="chat-submit" phx-hook="Chat">
-        <h1>Welcome to the Chat Room</h1>
-        <p>User: <%= @user_id %></p>
-        <p>You are in chat: <%= @room %></p>
-        <div id="room-info" data-user-id={@user_id} data-room-id={@room}></div>
-        <div class="chat">
-          <div class="chat-title">
-            <h1>Time Remaining</h1>
-            <h2>1:32</h2>
-            <figure class="avatar">
-              <img src="" />
-            </figure>
-          </div>
-          <div class="messages">
-            <div class="messages-content"></div>
-          </div>
-          <div class="message-box">
-            <textarea type="text" class="message-input" placeholder="Type message..."></textarea>
-            <button type="submit" class="message-submit">Send</button>
-          </div>
-          <div id="prompt" style="display:none;">
-            <p>Who did you talk to?</p>
-            <button id="human-btn">HUMAN</button>
-            <button id="bot-btn">BOT</button>
-          </div>
-          <div id="guess-result" style="display:none;">
-            <p>This conversation was with a</p>
-            <p id="guess"></p>
-          </div>
+      <%= if @loading do %>
+        <div id="loading-screen">
+          <p>Loading... Please wait for another user to join.</p>
         </div>
-      <div class="bg"></div>
-      </div>
+      <% else %>
+        <div id="chat-room-container" id="chat-submit" phx-hook="Chat">
+          <h1>Welcome to the Chat Room</h1>
+          <p>User: <%= @user_id %></p>
+          <p>Room: <%= @room %></p>
+          <div id="room-info" data-user-id={@user_id} data-room-id={@room}></div>
+          <div class="chat">
+            <div class="chat-title">
+              <h1>Time Remaining</h1>
+              <h2 id="timer">0:00</h2>
+              <figure class="avatar">
+                <img src="" />
+              </figure>
+            </div>
+            <div class="messages">
+              <div class="messages-content" ></div>
+            </div>
+              <div class="message-box">
+                <textarea type="text" class="message-input" placeholder="Type message..." disabled="true"></textarea>
+                <button type="submit" class="message-submit" disabled="true">Send</button>
+              </div>
+            <div id="prompt" style="display:none;">
+              <p>WHO DID YOU TALK TO?</p>
+              <button id="human-btn">HUMAN</button>
+              <button id="bot-btn">BOT</button>
+            </div>
+            <div id="guess-result" style="display:none;">
+              <p>THIS CONVERSATION WAS WITH A</p>
+              <p id="guess"></p>
+            </div>
+          </div>
+        <div class="bg"></div>
+        </div>
+      <% end %>
     <% else %>
       <div id="home-screen">
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato">
@@ -145,5 +244,4 @@ defmodule ChatturingWeb.PageLive do
     <% end %>
     """
   end
-
 end

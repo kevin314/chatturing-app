@@ -16,7 +16,7 @@ defmodule ChatturingWeb.RoomChannel do
     case socket.assigns[:user_id] do
       nil ->
         {:error, %{reason: "unauthorized"}}
-      user_id ->
+      _user_id ->
         {:ok, room} = Chatturing.RoomRegistry.allocate_room()
         Chatturing.RoomRegistry.add_user_to_room(room, socket.assigns.user_id)
         {:ok, %{room: room}, assign(socket, :room, room)}
@@ -39,7 +39,6 @@ defmodule ChatturingWeb.RoomChannel do
   @impl true
   # Channels can be used in a request/response fashion
   # by sending replies to requests from the client
-  @impl true
   def handle_in("ping", payload, socket) do
     IO.puts('ping!!')
     {:reply, {:ok, payload}, socket}
@@ -54,15 +53,15 @@ defmodule ChatturingWeb.RoomChannel do
   end
 
   @impl true
-  def terminate(_reason, socket) do
-    user_id = socket.assigns.user_id
-    room_id = socket.assigns.room
-    Chatturing.RoomRegistry.remove_user_from_room(room_id, user_id)
+  def terminate(_reason, _socket) do
+    #user_id = socket.assigns.user_id
+    #room_id = socket.assigns.room
+    #Chatturing.RoomRegistry.remove_user_from_room(room_id, user_id)
     :ok
   end
 
   # Add authorization logic here as required.
-  defp authorized?(_payload) do
-    true
-  end
+  # defp authorized?(_payload) do
+  #   true
+  # end
 end

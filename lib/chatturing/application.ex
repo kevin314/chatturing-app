@@ -10,7 +10,7 @@ defmodule Chatturing.Application do
     children = [
       Chatturing.RoomRegistry,
       ChatturingWeb.Telemetry,
-      Chatturing.Repo,
+      #Chatturing.Repo,
       {DNSCluster, query: Application.get_env(:chatturing, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Chatturing.PubSub},
       # Start the Finch HTTP client for sending emails
