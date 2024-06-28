@@ -5,26 +5,15 @@ defmodule ChatturingWeb.PageLive do
     IO.puts('MOUNT!')
     user_id = Ecto.UUID.generate()
     room = params["room"] || session["room"]
-    # {:ok, room} = Chatturing.RoomRegistry.allocate_room()
-    # Chatturing.RoomRegistry.add_user_to_room(room, user_id)
+
     {:ok, assign(socket, room: room, user_id: user_id, turn_user_id: nil, loading: true)}
   end
-
-  # def handle_event("new_msg", %{"body" => body}, socket) do
-  #   broadcast!(socket, "new_msg", %{user_id: socket.assigns.user_id, body: body})
-  #   {:noreply, socket}
-  # end
-
-  # def handle_event("send_message", %{"message" => message, "value" => _value}, socket) do
-  #   IO.puts('handle_send_message!')
-  #   #messages = socket.assigns.messages ++ [message]
-  #   {:noreply, assign(socket, message: message)}
-  # end
 
   def handle_event("join_chat", %{"user_id" => user_id, "value" => _value}, socket) do
     IO.puts('handle_join_chat!')
     random_num = :rand.uniform()
-    if random_num < 1 do
+
+    if random_num > 0.5 do
       {:ok, room} = Chatturing.RoomRegistry.allocate_room()
       IO.puts(room)
       Chatturing.RoomRegistry.add_user_to_room(room, user_id)
@@ -34,16 +23,15 @@ defmodule ChatturingWeb.PageLive do
       users = Chatturing.RoomRegistry.get_users_from_room(room)
       if length(users) == 2 do
         socket = assign(socket, room: room, user_id: user_id, loading: true, turn_user_id: socket.assigns.user_id)
-        #socket = assign(socket, :turn_user_id, socket.assigns.user_id)
         Process.send_after(self(), {:check_room, room}, 3000)
         {:noreply, socket}
       else
         socket = assign(socket, room: room, user_id: user_id, loading: true)
-        #Process.send_after(self(), {:check_room, room}, 3000)
+        Process.send_after(self(), {:check_room, room}, 10000)
         {:noreply, socket}
       end
     else
-      room = "room:bot"
+      room = "room:930b9c27-5a6d-46e8-bot5-51d998650e40"
       IO.puts(room)
       socket = assign(socket, room: room, user_id: user_id, loading: true)
       Process.send_after(self(), {:check_room, room}, 3000)
@@ -55,8 +43,7 @@ defmodule ChatturingWeb.PageLive do
     IO.puts('HANDLE SEND MESSAGE!')
     room = socket.assigns.room
     user_id = socket.assigns.user_id
-    if room == "room:bot" do
-      #socket = push_event(socket, "update_turn", %{"turnUserId" => "bot"})
+    if room == "room:930b9c27-5a6d-46e8-bot5-51d998650e40" do
 
       saved = socket.assigns[:saved] || ""
       res = Chatturing.Messenger.send_message_to_python(message, saved, user_id)
@@ -64,7 +51,6 @@ defmodule ChatturingWeb.PageLive do
       :timer.sleep(2000 + random_number)
 
       socket = assign(socket, saved: res["saved"])
-      #Process.send_after(self(), {:update_turn, %{"user_id" => user_id}}, 3000)
       socket = push_event(socket, "update_turn", %{"turnUserId" => user_id})
       {:noreply, push_event(socket, "new_msg", %{"message" => res["message"], "user_id" => "bot"})}
 
@@ -103,8 +89,7 @@ defmodule ChatturingWeb.PageLive do
   end
 
   def handle_info({:check_room, room}, socket) do
-    if room == "room:bot" do
-      #socket = assign(socket, :loading, false)
+    if room == "room:930b9c27-5a6d-46e8-bot5-51d998650e40" do
       IO.puts("CHECK ROOM BOT")
       send(self(), {:finish_loading})
       {:noreply, socket}
@@ -115,23 +100,33 @@ defmodule ChatturingWeb.PageLive do
 
       if length(users_in_room) >= 2 do
         IO.puts("REMOVE LOADING SCREEN")
-        #Chatturing.RoomRegistry.remove_room(room)
-        socket = assign(socket, :turn_user_id, socket.assigns.user_id)
         Phoenix.PubSub.broadcast(Chatturing.PubSub, "chat_room:" <> room, {:finish_loading})
         {:noreply, socket}
       else
-        #Process.send_after(self(), {:check_room, room}, 1000)
+        send(self(), {:switch_room, room})
         {:noreply, socket}
       end
     end
+  end
+
+  def handle_info({:switch_room, room}, socket) do
+    IO.puts("SWITCHING TO BOT ROOM")
+    Chatturing.RoomRegistry.remove_room(room)
+
+    room = "room:930b9c27-5a6d-46e8-bot5-51d998650e40"
+    IO.puts(room)
+    socket = assign(socket, room: room, user_id: socket.assigns.user_id, loading: true, turn_user_id: socket.assigns.user_id)
+    Process.send_after(self(), {:check_room, room}, 3000)
+    {:noreply, socket}
   end
 
   def handle_info({:finish_loading}, socket) do
     IO.puts("FINISH LOADING")
     room = socket.assigns.room
 
-    random_number = :rand.uniform(1)
-    if room == "room:bot" and random_number >= 0 do
+    random_number = :rand.uniform()
+    IO.puts(random_number)
+    if room == "room:930b9c27-5a6d-46e8-bot5-51d998650e40" and random_number > 0.5 do
       room = socket.assigns.room
 
       socket = assign(socket, :loading, false)
@@ -140,9 +135,7 @@ defmodule ChatturingWeb.PageLive do
       send(self(), {:send_bot_message})
       {:noreply, socket}
     else
-
       IO.puts(socket.assigns.turn_user_id)
-      socket = assign(socket, :turn_user_id, socket.assigns.turn_user_id)
 
       socket = push_event(socket, "update_turn", %{"turnUserId" => socket.assigns.turn_user_id})
       socket = assign(socket, :loading, false)
@@ -152,13 +145,15 @@ defmodule ChatturingWeb.PageLive do
   end
 
   def handle_info({:send_bot_message}, socket) do
+    IO.puts("send bot message")
     res = Chatturing.Messenger.send_message_to_python("hello", "", socket.assigns.user_id)
     random_number = :rand.uniform(3000)
+    IO.puts(random_number)
+
     :timer.sleep(2000 + random_number)
 
     socket = assign(socket, saved: res["saved"])
-    #Process.send_after(self(), {:update_turn, %{"user_id" => user_id}}, 3000)
-    #socket = push_event(socket, "update_turn", %{"turnUserId" => user_id})
+
     socket = push_event(socket, "update_turn", %{"turnUserId" => socket.assigns.user_id})
     {:noreply, push_event(socket, "new_msg", %{"message" => res["message"], "user_id" => "bot"})}
   end
