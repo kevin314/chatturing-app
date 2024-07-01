@@ -1,6 +1,6 @@
 defmodule Chatturing.Messenger do
   def send_message_to_python(message, saved, user_id) do
-    url = "http://localhost:5000/api/messages"
+    url = "http://172.27.129.84:5000/api/messages"
     payload = %{"message" => message, "saved" => saved, "user_id" => user_id} |> Jason.encode!()
     headers = [{"Content-Type", "application/json"}]
 

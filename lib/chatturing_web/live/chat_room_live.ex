@@ -13,7 +13,7 @@ defmodule ChatturingWeb.PageLive do
     IO.puts('handle_join_chat!')
     random_num = :rand.uniform()
 
-    if random_num > 0.5 do
+    if random_num > 1 do
       {:ok, room} = Chatturing.RoomRegistry.allocate_room()
       IO.puts(room)
       Chatturing.RoomRegistry.add_user_to_room(room, user_id)
@@ -33,7 +33,7 @@ defmodule ChatturingWeb.PageLive do
     else
       room = "room:930b9c27-5a6d-46e8-bot5-51d998650e40"
       IO.puts(room)
-      socket = assign(socket, room: room, user_id: user_id, loading: true)
+      socket = assign(socket, room: room, user_id: user_id, loading: true, turn_user_id: socket.assigns.user_id)
       Process.send_after(self(), {:check_room, room}, 3000)
       {:noreply, socket}
     end
@@ -126,7 +126,7 @@ defmodule ChatturingWeb.PageLive do
 
     random_number = :rand.uniform()
     IO.puts(random_number)
-    if room == "room:930b9c27-5a6d-46e8-bot5-51d998650e40" and random_number > 0.5 do
+    if room == "room:930b9c27-5a6d-46e8-bot5-51d998650e40" and random_number > 1 do
       room = socket.assigns.room
 
       socket = assign(socket, :loading, false)
