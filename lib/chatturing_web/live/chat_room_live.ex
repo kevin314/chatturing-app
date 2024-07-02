@@ -47,7 +47,7 @@ defmodule ChatturingWeb.PageLive do
 
       saved = socket.assigns[:saved] || ""
       res = Chatturing.Messenger.send_message_to_python(message, saved, user_id)
-      random_number = :rand.uniform(3000)
+      random_number = :rand.uniform(8000)
       :timer.sleep(2000 + random_number)
 
       socket = assign(socket, saved: res["saved"])
@@ -130,8 +130,8 @@ defmodule ChatturingWeb.PageLive do
       room = socket.assigns.room
 
       socket = assign(socket, :loading, false)
-      Process.send_after(self(), {:end_game, %{"room" => room}}, 60000)
-      socket = push_event(socket, "start_timer", %{"time" => 60000})
+      Process.send_after(self(), {:end_game, %{"room" => room}}, 120000)
+      socket = push_event(socket, "start_timer", %{"time" => 120000})
       send(self(), {:send_bot_message})
       {:noreply, socket}
     else
@@ -139,15 +139,15 @@ defmodule ChatturingWeb.PageLive do
 
       socket = push_event(socket, "update_turn", %{"turnUserId" => socket.assigns.turn_user_id})
       socket = assign(socket, :loading, false)
-      Process.send_after(self(), {:end_game, %{"room" => room}}, 60000)
-      {:noreply, push_event(socket, "start_timer", %{"time" => 60000})}
+      Process.send_after(self(), {:end_game, %{"room" => room}}, 120000)
+      {:noreply, push_event(socket, "start_timer", %{"time" => 120000})}
     end
   end
 
   def handle_info({:send_bot_message}, socket) do
     IO.puts("send bot message")
     res = Chatturing.Messenger.send_message_to_python("hello", "", socket.assigns.user_id)
-    random_number = :rand.uniform(3000)
+    random_number = :rand.uniform(8000)
     IO.puts(random_number)
 
     :timer.sleep(2000 + random_number)
@@ -181,7 +181,6 @@ defmodule ChatturingWeb.PageLive do
         </div>
       <% else %>
         <div id="chat-room-container" id="chat-submit" phx-hook="Chat">
-          <h1>Welcome to the Chat Room</h1>
           <p>User: <%= @user_id %></p>
           <p>Room: <%= @room %></p>
           <div id="room-info" data-user-id={@user_id} data-room-id={@room}></div>
@@ -232,8 +231,7 @@ defmodule ChatturingWeb.PageLive do
       <div class="anim-letter-10">n</div>
       <div class="anim-letter-11">g</div>
       </div>
-        <h1>Welcome to the Home Page</h1>
-        <p>This is the home page.</p>
+        <p>Join a chat room to play!</p>
         <button phx-click="join_chat" phx-value-user_id={@user_id}>Go to Chat Room</button>
       </div>
     <% end %>
