@@ -163,7 +163,7 @@ Hooks.Chat = {
       humanBtn.addEventListener('click', () => {
         console.log('HUMAN button clicked');
         prompt.style.display = 'none';
-        if (room === "room:bot") {
+        if (room === "room:930b9c27-5a6d-46e8-bot5-51d998650e40") {
           guessText.textContent = 'BOT!';
         } else {
           guessText.textContent = 'HUMAN!';
