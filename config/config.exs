@@ -11,6 +11,8 @@ config :chatturing,
   ecto_repos: [Chatturing.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+config :chatturing, :python_server_url, System.get_env("PYTHON_SERVER_URL", "http://localhost:5000")
+
 # Configures the endpoint
 config :chatturing, ChatturingWeb.Endpoint,
   url: [host: "localhost"],
