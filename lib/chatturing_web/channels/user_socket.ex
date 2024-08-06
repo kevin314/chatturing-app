@@ -42,7 +42,6 @@ defmodule ChatturingWeb.UserSocket do
   end
   # @impl true
   # def connect(_params, socket, _connect_info) do
-  #   IO.puts("connect!")
   #   {:ok, socket}
   # end
 

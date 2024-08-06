@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  chatturing:
+    image: chatturing
+    build:
+      context: .
+      dockerfile: ./Dockerfile
